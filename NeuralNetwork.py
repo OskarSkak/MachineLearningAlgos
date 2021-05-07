@@ -20,7 +20,10 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn import svm
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import StandardScaler
-import keras
+from tensorflow import keras
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import Conv2D, Conv1D, MaxPooling2D, Dense, Flatten
+from tensorflow.keras.utils import to_categorical
 
 allStudentData = genfromtxt('./idlist.csv', delimiter=',')
 allStudentData = allStudentData[1:]
@@ -71,6 +74,8 @@ data.makeDisjunct()
 
 trainData = data.instanceAttriTrain
 trainLabels = data.instanceLabelTrain
+testLabels = data.instanceLabelTest
+
 
 def runMLP(	mlpTrainData, mlpTestData,
 			solverType = "adam", activationFunction = "relu", alpha=0.0001, learning_rate = "constant",
@@ -100,11 +105,57 @@ def runMLP(	mlpTrainData, mlpTestData,
 
 	
 def runTenserflowConvu():
-	train_images = trainData
+	train_images = np.reshape(trainData, (20000, 18, 18))
 	train_labels = trainLabels
+	test_images = np.reshape(data.instanceAttriTest, (20000, 18, 18))
+	test_labels = testLabels
 	
+	print("train image and labels and test image before reshaping:")
 	print(train_images.shape)
 	print(train_labels.shape)
+	print(test_images.shape)
+	
+	train_images = np.expand_dims(train_images, axis=3)
+	test_images = np.expand_dims(test_images, axis=3)
+
+	print("train image and labels and test image after reshaping:")
+	print(train_images.shape)
+	print(train_labels.shape)
+	print(test_images.shape)
+	
+	num_filters = 8
+	filter_size = 3
+	pool_size = 2
+	
+	model = Sequential([
+		#layers
+		#Three types: Convolutional, max pooling, softmax
+		Conv2D(num_filters, filter_size, input_shape=(18, 18, 1)),
+		Conv2D(num_filters, filter_size),
+		Conv2D(num_filters, filter_size),
+		MaxPooling2D(pool_size=pool_size),
+		Flatten(),
+		Dense(10, activation='softmax'),
+	])
+	
+	model.compile(
+		'adam',
+		loss='categorical_crossentropy',
+		metrics=['accuracy'],
+	)
+	
+	model.fit(
+		train_images,
+		to_categorical(train_labels),
+		epochs=3,
+		validation_data=(test_images, to_categorical(trainLabels)),
+	)
+	
+	predictions = model.predict(test_images[:5]) #Testing on the first 5 images
+	
+	#Print against first 5 labels
+	print(np.argmax(predictions, axis=1))
+	print(test_labels[:5])
 	
 runTenserflowConvu()
 	
